@@ -7,16 +7,28 @@ A reverse proxy setup using Nginx to route incoming HTTP traffic to a Flask back
 - Docker installed
 - Flask app container running with name `flask-container` on port 5000
 
-To start your Flask app:
+### Setup Flask App (Prerequisite)
+
+First, clone and run the Flask application:
+
 ```bash
+# Clone the Flask app repository
+git clone https://github.com/nabbi007/simple-flask-app.git
+cd simple-flask-app
+
+# Build and run the Flask container
+docker build -t flask-app .
 docker run -d --name flask-container -p 5000:5000 flask-app
+
+# Verify Flask app is running
+curl http://localhost:5000
 ```
 
 ## Project Structure
 
 - `nginx.conf` - Nginx configuration with upstream backend, security headers, and health check endpoint
 - `Dockerfile` - Multi-stage build with non-root user and health checks
-- `docker-compose.yml` - Orchestrates nginx-proxy and links to existing flask-container
+- `docker-compose.yml` - Orchestrates nginx-proxy and connects to flask-container
 - `.dockerignore` - Excludes unnecessary files from Docker build context
 
 ## How It Works
@@ -31,7 +43,7 @@ docker run -d --name flask-container -p 5000:5000 flask-app
 ### Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/nabbi007/Reverse-proxy.git
 cd reverse_proxy/nginx-proxy
 ```
 
@@ -43,7 +55,7 @@ docker-compose up -d
 
 This command will:
 - Build the Nginx image with custom configuration
-- Link to the existing flask-container
+- Connect to the existing flask-container via host network
 - Expose port 8080 for external access
 
 ### Verify It's Running
@@ -77,7 +89,7 @@ docker-compose down
 
 ### Nginx Configuration
 
-- Upstream backend points to flask-container:5000
+- Upstream backend points to host.docker.internal:5000
 - Security headers added to all responses
 - Connection timeouts set to 60 seconds
 - Health check endpoint at `/health`
@@ -85,6 +97,6 @@ docker-compose down
 
 ### Docker Compose
 
-- Uses external_links to connect to existing flask-container
+- Uses bridge network mode
+- Connects to flask-container via published port
 - Health checks configured for monitoring
-- Bridge network mode for container communication
