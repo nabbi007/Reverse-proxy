@@ -1,102 +1,72 @@
 # Nginx Reverse Proxy
 
-A reverse proxy setup using Nginx to route incoming HTTP traffic to a Flask backend application. The proxy listens on port 8080 and forwards requests to the Flask app running on port 5000.
+This project runs an Nginx reverse proxy on port `8080` and forwards traffic to a backend container on port `5000`.
+
+Current backend target:
+- Container name: `study-planner`
+- Published port: `5000:5000`
 
 ## Prerequisites
 
-- Docker installed
-- Flask app container running with name `flask-container` on port 5000
-
-### Setup Flask App (Prerequisite)
-
-First, clone and run the Flask application:
-
-```bash
-# Clone the Flask app repository
-git clone https://github.com/nabbi007/simple-flask-app.git
-cd simple-flask-app
-
-# Build and run the Flask container
-docker build -t flask-app .
-docker run -d --name flask-container -p 5000:5000 flask-app
-
-# Verify Flask app is running
-curl http://localhost:5000
-```
+- Docker and Docker Compose plugin installed
+- Backend container already running (example: `study-planner` on port `5000`)
 
 ## Project Structure
 
-- `nginx.conf` - Nginx configuration with upstream backend, security headers, and health check endpoint
-- `Dockerfile` - Multi-stage build with non-root user and health checks
-- `docker-compose.yml` - Orchestrates nginx-proxy and connects to flask-container
-- `.dockerignore` - Excludes unnecessary files from Docker build context
+- `nginx-proxy/nginx.conf` - Nginx upstream, proxy rules, security headers, and `/health` endpoint
+- `nginx-proxy/Dockerfile` - Hardened Nginx image (non-root user, health check, graceful stop)
+- `nginx-proxy/docker-compose.yml` - Runs `nginx-proxy` and links to `study-planner`
+- `nginx-proxy/.dockerignore` - Reduces Docker build context
 
 ## How It Works
 
 1. Client sends request to `http://localhost:8080`
-2. Nginx receives the request and forwards it to flask-container on port 5000
-3. Flask app processes the request and returns response
-4. Nginx sends the response back to the client
+2. Nginx receives the request
+3. Nginx proxies it to `host.docker.internal:5000`
+4. Backend response is returned to the client
 
-## Getting Started
+## Backend Example
 
-### Clone the Repository
+If your image is already built as `study-planner`, run:
 
 ```bash
-git clone https://github.com/nabbi007/Reverse-proxy.git
-cd reverse_proxy/nginx-proxy
+docker run -d --name study-planner -p 5000:5000 study-planner
 ```
 
-### Start the Nginx Proxy
+Verify backend directly:
 
 ```bash
-docker-compose up -d
+curl http://localhost:5000
 ```
 
-This command will:
-- Build the Nginx image with custom configuration
-- Connect to the existing flask-container via host network
-- Expose port 8080 for external access
+## Run the Proxy
 
-### Verify It's Running
+From the repository root:
 
 ```bash
-# Check health endpoint
+cd nginx-proxy
+docker compose up -d --build
+```
+
+## Verify
+
+```bash
+# Nginx health
 curl http://localhost:8080/health
 
-# Access the Flask application through the proxy
+# App through reverse proxy
 curl http://localhost:8080
 ```
 
-### Stop the Service
+## Stop
 
 ```bash
-docker-compose down
+cd nginx-proxy
+docker compose down
 ```
 
-## Docker Best Practices Implemented
+## Configuration Notes
 
-- Non-root user execution for security
-- Specific version tags (nginx:1.25-alpine) instead of latest
-- Security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection)
-- Health checks for container monitoring
-- Restart policy (unless-stopped) for reliability
-- Minimal Alpine base image for smaller footprint
-- .dockerignore for optimized build context
-- Proper signal handling (SIGQUIT) for graceful shutdown
-
-## Configuration Details
-
-### Nginx Configuration
-
-- Upstream backend points to host.docker.internal:5000
-- Security headers added to all responses
-- Connection timeouts set to 60 seconds
-- Health check endpoint at `/health`
-- Proxy headers forwarded (Host, X-Real-IP, X-Forwarded-For)
-
-### Docker Compose
-
-- Uses bridge network mode
-- Connects to flask-container via published port
-- Health checks configured for monitoring
+- Nginx upstream is set in `nginx-proxy/nginx.conf` as `host.docker.internal:5000`
+- Proxy container exposes host port `8080` to container port `80`
+- Compose currently references `study-planner` via `external_links`

@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     network_mode: bridge
     external_links:
-      - flask-container
+      - study-planner
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
